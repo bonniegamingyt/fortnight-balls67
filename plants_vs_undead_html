@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Plants vs Zombies Mini</title>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #88cc88; overflow: hidden; }
+  #game { position: relative; width: 800px; height: 400px; margin: 20px auto; background: #aaeebb; border: 2px solid #333; }
+  .plant, .zombie, .bullet { position: absolute; }
+  .plant { width: 40px; height: 40px; background: green; border-radius: 5px; }
+  .zombie { width: 40px; height: 60px; background: gray; border-radius: 5px; }
+  .bullet { width: 10px; height: 5px; background: yellow; }
+</style>
+</head>
+<body>
+<h1 style="text-align:center;">Plants vs Zombies Mini</h1>
+<div id="game"></div>
+
+<script>
+const game = document.getElementById('game');
+const plants = [];
+const zombies = [];
+const bullets = [];
+
+// Create a plant
+function createPlant(x, y) {
+    const plant = document.createElement('div');
+    plant.className = 'plant';
+    plant.style.left = x + 'px';
+    plant.style.top = y + 'px';
+    plant.health = 3;
+    game.appendChild(plant);
+    plants.push(plant);
+}
+
+// Create a zombie
+function createZombie(y) {
+    const zombie = document.createElement('div');
+    zombie.className = 'zombie';
+    zombie.style.left = '760px';
+    zombie.style.top = y + 'px';
+    zombie.health = 5;
+    game.appendChild(zombie);
+    zombies.push(zombie);
+}
+
+// Shoot a bullet
+function shootBullet(plant) {
+    const bullet = document.createElement('div');
+    bullet.className = 'bullet';
+    bullet.style.left = parseInt(plant.style.left) + 40 + 'px';
+    bullet.style.top = parseInt(plant.style.top) + 18 + 'px';
+    bullets.push({el: bullet});
+    game.appendChild(bullet);
+}
+
+// Add initial plants
+createPlant(50, 50);
+createPlant(50, 150);
+createPlant(50, 250);
+
+// Add zombies periodically
+setInterval(() => {
+    const y = Math.floor(Math.random() * 7) * 50 + 50;
+    createZombie(y);
+}, 2000);
+
+// Shoot bullets periodically
+setInterval(() => {
+    plants.forEach(plant => shootBullet(plant));
+}, 1000);
+
+// Game loop
+function gameLoop() {
+    // Move zombies
+    zombies.forEach((zombie, zi) => {
+        zombie.style.left = parseInt(zombie.style.left) - 1 + 'px';
+        // Check collision with plants
+        plants.forEach((plant, pi) => {
+            if (Math.abs(parseInt(zombie.style.left) - parseInt(plant.style.left)) < 40 &&
+                Math.abs(parseInt(zombie.style.top) - parseInt(plant.style.top)) < 40) {
+                plant.health--;
+                if (plant.health <= 0) {
+                    plant.remove();
+                    plants.splice(pi, 1);
+                }
+            }
+        });
+        // Check if zombie reached left
+        if (parseInt(zombie.style.left) <= 0) {
+            alert("Game Over!");
+            location.reload();
+        }
+    });
+
+    // Move bullets
+    bullets.forEach((bulletObj, bi) => {
+        bulletObj.el.style.left = parseInt(bulletObj.el.style.left) + 5 + 'px';
+        zombies.forEach((zombie, zi) => {
+            if (Math.abs(parseInt(bulletObj.el.style.left) - parseInt(zombie.style.left)) < 20 &&
+                Math.abs(parseInt(bulletObj.el.style.top) - parseInt(zombie.style.top)) < 30) {
+                zombie.health--;
+                bulletObj.el.remove();
+                bullets.splice(bi,1);
+                if(zombie.health <=0){
+                    zombie.remove();
+                    zombies.splice(zi,1);
+                }
+            }
+        });
+    });
+
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
