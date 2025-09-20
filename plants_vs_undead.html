@@ -2,107 +2,143 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Plants vs Zombies Mini</title>
+<title>Mini PvZ Game</title>
 <style>
-  body { margin: 0; font-family: sans-serif; background: #88cc88; overflow: hidden; }
+  body { margin: 0; font-family: sans-serif; background: #88cc88; }
+  h1 { text-align:center; }
   #game { position: relative; width: 800px; height: 400px; margin: 20px auto; background: #aaeebb; border: 2px solid #333; }
-  .plant, .zombie, .bullet { position: absolute; }
-  .plant { width: 40px; height: 40px; background: green; border-radius: 5px; }
-  .zombie { width: 40px; height: 60px; background: gray; border-radius: 5px; }
+  .cell { width: 80px; height: 80px; float: left; border: 1px solid #77aa77; box-sizing: border-box; position: relative; }
+  .plant, .zombie, .bullet, .lawnmower { position: absolute; }
+  .plant { width: 60px; height: 60px; background: green; border-radius: 10px; }
+  .zombie { width: 60px; height: 70px; background: gray; border-radius: 10px; }
   .bullet { width: 10px; height: 5px; background: yellow; }
+  .lawnmower { width: 70px; height: 50px; background: silver; border-radius: 50%; }
+  #menu { text-align:center; margin:10px; }
+  .menu-btn { padding:5px 10px; margin:0 5px; cursor:pointer; background: #88cc88; border:1px solid #333; border-radius:5px; }
 </style>
 </head>
 <body>
-<h1 style="text-align:center;">Plants vs Zombies Mini</h1>
+<h1>Mini PvZ Game</h1>
+<div id="menu">
+  <button class="menu-btn" onclick="selectPlant('peashooter')">Peashooter</button>
+  <button class="menu-btn" onclick="selectPlant('sunflower')">Sunflower</button>
+</div>
 <div id="game"></div>
 
 <script>
 const game = document.getElementById('game');
+const rows = 5;
+const cols = 10;
+const grid = [];
+let selectedPlant = 'peashooter';
 const plants = [];
 const zombies = [];
 const bullets = [];
+const lawnmowers = [];
 
-// Create a plant
-function createPlant(x, y) {
+// Create lawn grid
+for(let r=0;r<rows;r++){
+    grid[r] = [];
+    for(let c=0;c<cols;c++){
+        const cell = document.createElement('div');
+        cell.className='cell';
+        cell.dataset.row=r;
+        cell.dataset.col=c;
+        cell.addEventListener('click',()=>placePlant(r,c));
+        game.appendChild(cell);
+        grid[r][c]=cell;
+    }
+}
+
+// Place plant
+function placePlant(row,col){
+    if(grid[row][col].querySelector('.plant')) return;
     const plant = document.createElement('div');
-    plant.className = 'plant';
-    plant.style.left = x + 'px';
-    plant.style.top = y + 'px';
-    plant.health = 3;
+    plant.className='plant';
+    plant.style.left = grid[row][col].offsetLeft+10+'px';
+    plant.style.top = grid[row][col].offsetTop+10+'px';
+    plant.dataset.type=selectedPlant;
+    plant.health=3;
     game.appendChild(plant);
     plants.push(plant);
 }
 
-// Create a zombie
-function createZombie(y) {
+// Plant selection
+function selectPlant(type){ selectedPlant=type; }
+
+// Spawn zombie
+function createZombie(row){
     const zombie = document.createElement('div');
-    zombie.className = 'zombie';
-    zombie.style.left = '760px';
-    zombie.style.top = y + 'px';
-    zombie.health = 5;
+    zombie.className='zombie';
+    zombie.style.left='760px';
+    zombie.style.top=(row*80+10)+'px';
+    zombie.health=5;
+    zombie.dataset.row=row;
     game.appendChild(zombie);
     zombies.push(zombie);
 }
 
-// Shoot a bullet
-function shootBullet(plant) {
+// Spawn lawnmowers
+for(let r=0;r<rows;r++){
+    const lm = document.createElement('div');
+    lm.className='lawnmower';
+    lm.style.left='0px';
+    lm.style.top=r*80+15+'px';
+    lm.active=true;
+    game.appendChild(lm);
+    lawnmowers.push(lm);
+}
+
+// Shoot bullets from plants
+function shootBullet(plant){
     const bullet = document.createElement('div');
-    bullet.className = 'bullet';
-    bullet.style.left = parseInt(plant.style.left) + 40 + 'px';
-    bullet.style.top = parseInt(plant.style.top) + 18 + 'px';
-    bullets.push({el: bullet});
+    bullet.className='bullet';
+    bullet.style.left = parseInt(plant.style.left)+60+'px';
+    bullet.style.top = parseInt(plant.style.top)+28+'px';
+    bullets.push({el:bullet,row:Math.floor(parseInt(plant.style.top)/80)});
     game.appendChild(bullet);
 }
 
-// Add initial plants
-createPlant(50, 50);
-createPlant(50, 150);
-createPlant(50, 250);
-
-// Add zombies periodically
-setInterval(() => {
-    const y = Math.floor(Math.random() * 7) * 50 + 50;
-    createZombie(y);
-}, 2000);
-
-// Shoot bullets periodically
-setInterval(() => {
-    plants.forEach(plant => shootBullet(plant));
-}, 1000);
-
 // Game loop
-function gameLoop() {
-    // Move zombies
-    zombies.forEach((zombie, zi) => {
-        zombie.style.left = parseInt(zombie.style.left) - 1 + 'px';
+function gameLoop(){
+    // Zombies move
+    zombies.forEach((zombie,zi)=>{
+        zombie.style.left=parseInt(zombie.style.left)-1+'px';
+        const row=parseInt(zombie.dataset.row);
         // Check collision with plants
-        plants.forEach((plant, pi) => {
-            if (Math.abs(parseInt(zombie.style.left) - parseInt(plant.style.left)) < 40 &&
-                Math.abs(parseInt(zombie.style.top) - parseInt(plant.style.top)) < 40) {
+        plants.forEach((plant,pi)=>{
+            if(Math.abs(parseInt(zombie.style.left)-parseInt(plant.style.left))<50 &&
+               Math.abs(parseInt(zombie.style.top)-parseInt(plant.style.top))<50){
                 plant.health--;
-                if (plant.health <= 0) {
+                if(plant.health<=0){
                     plant.remove();
-                    plants.splice(pi, 1);
+                    plants.splice(pi,1);
                 }
             }
         });
-        // Check if zombie reached left
-        if (parseInt(zombie.style.left) <= 0) {
-            alert("Game Over!");
-            location.reload();
+        // Activate lawnmower if zombie reaches start
+        if(parseInt(zombie.style.left)<=0){
+            if(lawnmowers[row].active){
+                lawnmowers[row].active=false;
+                zombies.splice(zi,1);
+                zombie.remove();
+            } else {
+                alert('Game Over!');
+                location.reload();
+            }
         }
     });
 
     // Move bullets
-    bullets.forEach((bulletObj, bi) => {
-        bulletObj.el.style.left = parseInt(bulletObj.el.style.left) + 5 + 'px';
-        zombies.forEach((zombie, zi) => {
-            if (Math.abs(parseInt(bulletObj.el.style.left) - parseInt(zombie.style.left)) < 20 &&
-                Math.abs(parseInt(bulletObj.el.style.top) - parseInt(zombie.style.top)) < 30) {
+    bullets.forEach((b,bi)=>{
+        b.el.style.left=parseInt(b.el.style.left)+5+'px';
+        zombies.forEach((zombie,zi)=>{
+            if(zombie.dataset.row==b.row &&
+               Math.abs(parseInt(b.el.style.left)-parseInt(zombie.style.left))<50){
                 zombie.health--;
-                bulletObj.el.remove();
+                b.el.remove();
                 bullets.splice(bi,1);
-                if(zombie.health <=0){
+                if(zombie.health<=0){
                     zombie.remove();
                     zombies.splice(zi,1);
                 }
@@ -110,9 +146,17 @@ function gameLoop() {
         });
     });
 
+    // Plants shoot bullets
+    plants.forEach(plant=>{
+        if(plant.dataset.type=='peashooter'){
+            if(Math.random()<0.02) shootBullet(plant);
+        }
+    });
+
     requestAnimationFrame(gameLoop);
 }
 
+setInterval(()=>{createZombie(Math.floor(Math.random()*rows));},2000);
 gameLoop();
 </script>
 </body>
